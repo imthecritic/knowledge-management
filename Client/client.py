@@ -65,7 +65,7 @@ class Client:
         connection.send("login".encode())
         status_code = connection.recv(2)
         if status_code != client_api.SUCCESS:
-            print("Failed")
+            print("Failled")
             return 0
 
         login_info = "username:" + username + ";password:" + password

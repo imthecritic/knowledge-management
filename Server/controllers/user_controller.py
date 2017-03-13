@@ -6,7 +6,7 @@ from Server import loginDecryption
 
 
 @verboseFunc
-def login_user(login_info):
+def login_user(connection, login_info):
     username = login_info['username']
     login = loginDecryption.LoginDecoding(username)
     username = login.getUsername()
@@ -16,16 +16,10 @@ def login_user(login_info):
     salt = hash_dic.get("salt")
     login.setSalt(salt)
     login.setAttemptedPasswordHash(password)
-    attempted_password = login.setAttemptedPasswordWithSalt(password,salt)
-    print("ATTEMPTED PASSWORD: " + attempted_password)
-    print ("Correct password: " + hashed_pw)
     login.setHashedPassword(hashed_pw)
-    if attempted_password == hashed_pw:
-        print ("GOT INSIDE!")
+    if login.checkPassword()==True:
         repo_id = db.login(username, hashed_pw)
         return repo_id
-
-
 
 @verboseFunc
 def register_user(register_info):
