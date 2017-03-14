@@ -382,6 +382,7 @@ class Client:
             raise RuntimeError('Arguements required')
         connection.send("retrieve_repo".encode())
         result = connection.recv(2)
+
         if not result == client_api.SUCCESS:
             print(result)
             return []
