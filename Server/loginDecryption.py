@@ -41,16 +41,16 @@ class LoginDecoding:
     def checkPassword(self):
         rightPass = self.hashedPassword
         attemptPass = self.attemptedPasswordHash
-
+        difference = False
         if len(rightPass) == 0:
             print('The password from database is empty or null!')
+            return difference
 
         if len(attemptPass) == 0:
             print('The password entered is empty or null!')
+            return  difference
 
         assert len(rightPass) == len(attemptPass)
-
-        difference = False
 
         rightPassArray = list(rightPass)
         attemptPassArray = list(attemptPass)
