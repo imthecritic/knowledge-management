@@ -86,7 +86,11 @@ class DB:
         if user is None:
             return None
         elif user[0] == username:
+<<<<<<< HEAD
             return user[5]
+=======
+            return user[2]
+>>>>>>> parent of b612b5d... Security questions added to user table
 
     def get_hashinfo(self, username):
         """

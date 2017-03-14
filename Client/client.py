@@ -2,9 +2,19 @@ import os
 import pickle
 import socket
 import ssl
+<<<<<<< HEAD
 import struct
 import sys
 from pickle import UnpicklingError
+=======
+from Client.client_c import client_api
+<<<<<<< HEAD
+from Client.loginEncryption import LoginEncoding
+from Client import g_personal_repoid, SOCKET_EOF
+=======
+from Client import repoids, SOCKET_EOF
+>>>>>>> dgore7/master
+>>>>>>> parent of b612b5d... Security questions added to user table
 from socket import error as SocketError
 
 from Client import SUCCESS, FAILURE, global_username
@@ -81,6 +91,7 @@ class Client:
             repo_id = repo_id_tup[0]
             repoids.append(repo_id)
             print(repo_id)
+            return 1
         else:
             return 0
 
@@ -93,10 +104,11 @@ class Client:
         """Takes the parameters, hashes the password, encodes the username, and prepares it to be sent to server"""
 
         if self.connected == False:
-            return 0
+            return False
         connection = self.sock
         connection.send("register".encode())
 
+<<<<<<< HEAD
         register = loginEncryption.LoginEncoding()
         register.setUsername(username)
         register.setPassword(password)
@@ -106,17 +118,27 @@ class Client:
 
         register_info = "username:" + username + ";password:" + password + ";sec_question:" \
                         + sec_question + ";sec_answer:" + sec_answer + ";password_salt:" + password_salt
+=======
+        register_info = "username:" + username + "; password:" + password + "; sec_question" \
+                        + sec_question + "; sec_answer" + sec_answer
+>>>>>>> parent of b612b5d... Security questions added to user table
         connection.send(register_info.encode())
         server_response = connection.recv(2)
         if server_response == client_api.SUCCESS:
+
             repoids.clear()
             packed_repo_id = connection.recv(4)
             repo_id_tup = struct.unpack('<L', packed_repo_id)
             repo_id = repo_id_tup[0]
             repoids.append(repo_id)
             print(repo_id)
+<<<<<<< HEAD
+=======
+            return True
+
+>>>>>>> parent of b612b5d... Security questions added to user table
         else:
-            return 0
+            return False
 
         global_username.clear()
         global_username.append(username)
