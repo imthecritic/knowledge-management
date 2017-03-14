@@ -2,14 +2,14 @@ from Server import verboseFunc
 from . import db
 from . import SUCCESS, FAILURE
 import os
+from Server import loginDecryption
 
 
 @verboseFunc
 def login_user(connection, login_info):
     username = login_info['username']
     password = login_info['password']
-    repo_id = db.login(username, password)
-    return repo_id
+    return db.login(username, password)
 
 @verboseFunc
 def register_user(register_info):
@@ -17,16 +17,12 @@ def register_user(register_info):
     password = register_info['password']
     sec_question = register_info["sec_question"]
     sec_answer = register_info["sec_answer"]
-<<<<<<< HEAD
-    password_salt = register_info["password_salt"]
     print("username: " + username)
     print("password: " +password)
     print ("question: " +sec_question)
     print ("answer:" + sec_answer)
-=======
->>>>>>> parent of b612b5d... Security questions added to user table
     print("Leaving RegisterHandler")
-    repo_id = db.register(username, password, sec_question, sec_answer, password_salt)
+    repo_id = db.register(username, password, sec_question, sec_answer)
     print(repo_id)
     if repo_id:
         os.makedirs(

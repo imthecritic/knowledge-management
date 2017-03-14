@@ -6,7 +6,7 @@
 
 """ All the sqlite3 functions needed for querying the db (encapsulates the sql code)
     DB object used by the data_retriever"""
-
+import os
 import sqlite3
 import threading
 import time
@@ -26,7 +26,6 @@ class DB:
              password   TEXT              NOT NULL,
              question   TEXT                      ,
              answer     TEXT                      ,
-             salt       TEXT              NOT NULL,
              repo_id    INTEGER           NOT NULL,
              FOREIGN KEY (repo_id) REFERENCES GROUPS(id));''')
 
@@ -64,16 +63,36 @@ class DB:
              FOREIGN KEY (tagname)  REFERENCES TAG(tagname) ON DELETE CASCADE ,
              PRIMARY KEY (filename, tagname));''')
 
+        self.conn.execute(""" INSERT OR IGNORE INTO GROUPS(id, groupname, user_created)
+                              VALUES (?,?,?)""", (0, 'SHARED_KM_REPO', False))
+
+        self.conn.execute(""" INSERT OR IGNORE INTO USER(username, password, repo_id)
+                              VALUES (?,?,?)""", ('DUMMY_SHARED_USER', 'LOL NO PASS', 0))
+
+
+        path_exists = os.path.exists(
+            os.path.normpath(
+                os.path.join(
+                    os.getcwd(),
+                    'FILE_REPO',
+                    'SHARED_KM_REPO')))
+
+        if not path_exists:
+            os.makedirs(
+                os.path.normpath(
+                    os.path.join(
+                        os.getcwd(),
+                        'FILE_REPO',
+                        'SHARED_KM_REPO')))
+
         self.conn.commit()
 
     def login(self, username, pword):
 
         """
         Attempts to find an entry in the USERS table with the given parameters
-
         :param username: username entered by user
         :param pword: password entered by user
-
         :return: False if username doesn't exist or incorrect password OR
                  True if username exists and enters correct password
         """
@@ -86,19 +105,14 @@ class DB:
         if user is None:
             return None
         elif user[0] == username:
-<<<<<<< HEAD
-            return user[5]
-=======
-            return user[2]
->>>>>>> parent of b612b5d... Security questions added to user table
+            return user[4]
 
-    def register(self, username, pword, sec_question, sec_answer, password_salt):
+
+    def register(self, username, pword, sec_question, sec_answer):
         """
         Attempts to enter a new username and pword into the USERS table
-
         :param username: new username, MUST BE UNIQUE
         :param pword: new password
-
         :return: False if username is not unique (can't have duplicate usernames)
                  True if username is unique and user is put in db
         """
@@ -109,8 +123,8 @@ class DB:
             c.execute("INSERT INTO GROUPS(groupname, user_created) VALUES(?,?)", (username + "_personal_repo", False))
             gid = c.lastrowid
             print(type(gid))
-            c.execute("INSERT INTO USER(username, password, question, answer, salt, repo_id) VALUES(?,?,?,?,?,?)", (username, pword, sec_question,
-                                                                                            sec_answer, password_salt ,gid))
+            c.execute("INSERT INTO USER(username, password, question, answer, repo_id) VALUES(?,?,?,?,?)", (username, pword, sec_question,
+                                                                                            sec_answer,gid))
             c.execute("INSERT INTO USER_GROUP(group_id, username) VALUES(?,?)", (gid, username))
             self.conn.commit()
             result = gid
@@ -246,7 +260,7 @@ class DB:
                                   (file_name, group_id, tag))
             self.conn.commit()
         except sqlite3.Error as e:
-            print("An Error Occured in upload: " + str(e.args) + "\n\t\t all vars = " + str(locals()))
+            print("An Error occurred in upload: " + str(e.args) + "\n\t\t all vars = " + str(locals()))
 
     def get_personal_repo_id(self, uname):
         return self.conn.execute('SELECT repo_id FROM USER WHERE username=?', (uname,)).fetchone()[0]
@@ -254,10 +268,11 @@ class DB:
     def get_groups(self, uname):
         cursor = self.conn.cursor()
         try:
-            cursor.execute("""SELECT GROUPS.groupname, GROUPS.id FROM
+            cursor.execute("""SELECT GROUPS.id, GROUPS.groupname FROM
                               GROUPS INNER JOIN USER_GROUP
                               ON GROUPS.id = USER_GROUP.group_id
-                              WHERE username = ?
+                              WHERE username = ? AND
+                              GROUPS.groupname NOT LIKE '%personal_repo'
                             """,
                             (uname,))
         except Exception as e:
@@ -267,9 +282,7 @@ class DB:
     def delete(self, fname, gid):
         """
         Attempts to delete fileName from the FILES table
-
         :param fileName: name of file
-
         :return: False if file is not found
                  True if the file is found in the FILES table and is deleted
         """
@@ -298,10 +311,8 @@ class DB:
     def search(self, query, owner):
         """
         Attempts to find all files matching the user's Query.
-
         :param query: a query supplied by the user
         :type query: dict
-
         :return results:  the set of rows in the format of (filename, timestamp, tagname) from the search
         """
 

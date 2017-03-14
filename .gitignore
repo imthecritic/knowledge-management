@@ -97,7 +97,6 @@ ENV/
 # Rope project settings
 .ropeproject
 
-Client/client.py
 
 KnowledgeManagement.crt
 

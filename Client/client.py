@@ -1,31 +1,16 @@
-import sys
-import socket
-
-import ssl
 import os
-import struct
-
 import pickle
-
-from pickle import UnpicklingError
-from Client.client_c import client_api
-from Client.loginEncryption import LoginEncoding
-from Client import g_personal_repoid, SOCKET_EOF
-from Client import repoids, SOCKET_EOF
-from socket import error as SocketError
-
-
-from Client import client_c, SUCCESS, FAILURE, global_username
-from Client.client_c import client_api
-import codecs
+import socket
 import ssl
-from Client.client_c import client_api
-from Client.loginEncryption import LoginEncoding
-#from Client import g_personal_repoid, SOCKET_EOF
-from Client import repoids, SOCKET_EOF
+import struct
+import sys
+from pickle import UnpicklingError
 from socket import error as SocketError
+
+from Client import SUCCESS, FAILURE, global_username
 from Client import loginEncryption
-from Client import loginDecryption
+from Client import repoids, SOCKET_EOF
+from Client.client_c import client_api
 
 
 class Client:
@@ -83,29 +68,16 @@ class Client:
             print("Failled")
             return 0
 
-
-        login = loginDecryption.LoginDecoding(username)
-        username = login.getUsername()
-
-        # TODO: Need to get the hashed password and salt from the database with this username
-        # If there is no entry with this username, it means there is no account
-        login.setHashedPassword("hashedPasswordFromDatabase")
-        login.setSalt("saltFromDatabase")
-        login.setAttemptedPasswordHash(password)
-
-        password = login.getAttemptedPasswordHash()
-       # dateTime = login.getDateTime()
-
-        isPasswordRight = login.checkPassword()
+        register = loginEncryption.LoginEncoding()
+        register.setUsername(username)
+        register.setPassword(password)
+        username = register.getUsername()
+        password = register.getPassword()
 
         login_info = "username:" + username + ";password:" + password
 
-        # print(login_info)
-
         connection.send(login_info.encode())
 
-        # self.sock.send(login_info.encode())
-        # connection.close()
         server_response = connection.recv(2)  # SUCCESS or FAILURE
         print(server_response.decode())
         if server_response == client_api.SUCCESS:
@@ -115,7 +87,6 @@ class Client:
             repo_id = repo_id_tup[0]
             repoids.append(repo_id)
             print(repo_id)
-            return 1
         else:
             return 0
 
@@ -128,43 +99,29 @@ class Client:
         """Takes the parameters, hashes the password, encodes the username, and prepares it to be sent to server"""
 
         if self.connected == False:
-            return False
+            return 0
         connection = self.sock
         connection.send("register".encode())
-
-
-
-        # credentials = LoginEncoding(username, password)
-        # username = credentials.getUsername()
-        # password = credentials.getPassword()
-        # key = credentials.getKey()
 
         register = loginEncryption.LoginEncoding()
         register.setUsername(username)
         register.setPassword(password)
         username = register.getUsername()
         password = register.getPassword()
-        password_salt = str(register.getPasswordSalt())
-        #dateTime = register.getDateTime()
 
         register_info = "username:" + username + ";password:" + password + ";sec_question:" \
-                        + sec_question + ";sec_answer:" + sec_answer + ";password_salt:" + password_salt
-
+                        + sec_question + ";sec_answer:" + sec_answer
         connection.send(register_info.encode())
         server_response = connection.recv(2)
         if server_response == client_api.SUCCESS:
-
             repoids.clear()
             packed_repo_id = connection.recv(4)
             repo_id_tup = struct.unpack('<L', packed_repo_id)
             repo_id = repo_id_tup[0]
             repoids.append(repo_id)
             print(repo_id)
-
-            return True
-
         else:
-            return False
+            return 0
 
         global_username.clear()
         global_username.append(username)
@@ -185,7 +142,7 @@ class Client:
 
         if status_code != SUCCESS:
             print("Error")
-            return
+            return -1
         message = []
         message.append("gname:")
         message.append(group)
@@ -206,12 +163,12 @@ class Client:
         packed_gid = connection.recv(4)
         gid = struct.unpack("<L", packed_gid)
         repoids.append(gid)
+        return 1
 
 
     def addMember(self, member_name):
         """
         Takes a username and adds it to the group that it used within.
-
         :param member_name:
         :return:
         """
@@ -273,6 +230,7 @@ class Client:
         msg.extend(['notes:', notes, ';'])
         print(tags)
         msg.extend(['mod_time:', mod_time, ';'])
+        ######### Add statements to determine where to upload
         msg.extend(['gid:', repo, ';'])
         tags_buffer = ['tags:']
         tags_buffer.extend(tag + ',' for tag in tags)
@@ -337,7 +295,6 @@ class Client:
         file = open(filename, "rb")
 
         for line in file:
-            print(line)
             connection.send(line)
         connection.send(SOCKET_EOF)
         file.close()
@@ -419,36 +376,53 @@ class Client:
         print(filename)
         # sock.close()
 
-    def retrieve_repo(self, group_id=None, username=None):
+    def retrieve_repo(self, group_ids=None):
         connection = self.sock
-        if not group_id and not username:
+        if not group_ids:
             raise RuntimeError('Arguements required')
-        connection.send("retrieve repo".encode())
-        result = connection.recv(1024).decode()
+        connection.send("retrieve_repo".encode())
+        result = connection.recv(2)
         if not result == client_api.SUCCESS:
             print(result)
             return []
-        if group_id:
-            connection.send(str(group_id).encode())
-        elif username:
-            connection.send(username.encode())
+        msg = 'group_ids:' + ','.join(str(gid) for gid in group_ids)
+        msg = msg.encode()
+        connection.send(msg)
+
+        result = connection.recv(2)
+        if not result == client_api.SUCCESS:
+            print(result)
+            return []
+
+        # python string builder pattern
         result = []
         while True:
             bytes_received = connection.recv(1024)
-            if bytes_received:
-                result.append(bytes_received)
-            else:
+            if bytes_received == SOCKET_EOF:
                 break
+            elif bytes_received:
+                result.append(bytes_received)
+
+        print(result)
         result = b''.join(result)
         return pickle.loads(result)
 
     def retrieve_groups(self, username):
         connection = self.sock
-        connection.send("groups_retrieve")
+        connection.send("groups_retrieve".encode())
+        result = connection.recv(1024)
+
+        if result != SUCCESS:
+            print("failed in retrieve groups1")
+            return []
+
+        message = "username:" + username
+        message = message.encode()
+        connection.send(message)
         result = connection.recv(2)
 
         if result != SUCCESS:
-            print("failed in retrieve groups")
+            print("failed in retrieve groups2")
             return []
 
         chunks = []
