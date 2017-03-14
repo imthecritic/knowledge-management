@@ -38,67 +38,6 @@ class LoginDecoding:
     def getAttemptedPasswordHash(self):
         return self.attemptedPasswordHash
 
-    def setAttemptedPasswordWithSalt(self, password, salt):
-        username = self.getUsername()
-        usernamePlain = self.loginDecryption(username)
-        print(usernamePlain)
-        hashedPassword = self.passwordHashing(usernamePlain, password, salt)
-        password = str(hashedPassword)
-        return password
-
-    def loginDecryption(self, encodedUsername):
-        mode = 'utf-8'
-
-        padding = "{"
-
-        blockSize = 16
-
-        padTheText = lambda s: s + (blockSize - len(s) % blockSize) * padding
-
-        decodeAES = lambda c, e: c.decrypt(base64.b64decode(e))
-
-        cipher = AES.new('This is a username secret key12.')
-
-        decodedUsername = decodeAES(cipher, encodedUsername)
-
-        decodedUsername = str(decodedUsername, mode)
-
-        decodedUsername = decodedUsername.rstrip(padding)
-
-        return decodedUsername
-
-
-    def passwordHashing(self, username, password, saltDB):
-        mode = 'utf-8'
-        # uses the username as salt
-        usernameSalt = str(username)
-
-        # adds to the username to make a more secure salt
-        salt = usernameSalt + 'This is CSC 376'
-
-        # salt = str.encode(salt)
-        # store randomSalt with user login info - each user has own random salt
-
-        randomSalt = saltDB
-
-        finalSalt = str(randomSalt) + salt
-        finalSalt = str.encode(finalSalt)
-        self.salt = finalSalt
-
-        iterations = 22000
-
-        password = str.encode(password)
-
-        hex = hashlib.pbkdf2_hmac(hash_name='sha256',
-                                  password=password,
-                                  salt=finalSalt,
-                                  iterations=iterations,
-                                  dklen=128)
-
-        hashHex = binascii.hexlify(hex)
-
-        return hashHex
-
     def checkPassword(self):
         rightPass = self.hashedPassword
         attemptPass = self.attemptedPasswordHash

@@ -35,12 +35,10 @@ class RequestHandler(threading.Thread):
                     if client_option == "login":
                         print("SENDING OK MESSAGE!")
                         self.connection.send(SUCCESS)
-                        msg = self.connection.recv(1024).decode()
-                        login_info = self.parse_request(msg)
-                        print(login_info)
-                        print("Logging in with: " + msg)
-                        repo_id = u_ctrlr.login_user(login_info)
-                        print ("repo ID: " + str(repo_id))
+                        msg = self.connection.recv(1024)
+                        login_info = self.parse_request(msg.decode())
+                        print("Logging in with: " + msg.decode())
+                        repo_id = u_ctrlr.login_user(self.connection, login_info)
                         if not repo_id:
                             self.connection.send(FAILURE)
                         else:
