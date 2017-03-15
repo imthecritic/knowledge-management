@@ -50,7 +50,6 @@ class RequestHandler(threading.Thread):
                         msg = self.connection.recv(1024).decode()
                         print("Registering user: " + msg)
                         repo_id = u_ctrlr.register_user(self.parse_request(msg))
-                        print(repo_id)
                         if repo_id:
                             self.connection.send(SUCCESS)
                             packed_repo_id = struct.pack('<L', repo_id)

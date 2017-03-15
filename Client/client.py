@@ -4,11 +4,11 @@ import socket
 import ssl
 import struct
 import sys
+import bcrypt
 from pickle import UnpicklingError
 from socket import error as SocketError
 
 from Client import SUCCESS, FAILURE, global_username
-from Client import loginEncryption
 from Client import repoids, SOCKET_EOF
 from Client.client_c import client_api
 
@@ -68,12 +68,6 @@ class Client:
             print("Failled")
             return 0
 
-        register = loginEncryption.LoginEncoding()
-        register.setUsername(username)
-        register.setPassword(password)
-        username = register.getUsername()
-        password = register.getPassword()
-
         login_info = "username:" + username + ";password:" + password
 
         connection.send(login_info.encode())
@@ -102,14 +96,8 @@ class Client:
             return 0
         connection = self.sock
         connection.send("register".encode())
-
-        register = loginEncryption.LoginEncoding()
-        register.setUsername(username)
-        register.setPassword(password)
-        username = register.getUsername()
-        password = register.getPassword()
-
-        register_info = "username:" + username + ";password:" + password + ";sec_question:" \
+        password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        register_info = "username:" + username + ";password:" + str(password) + ";sec_question:" \
                         + sec_question + ";sec_answer:" + sec_answer
         connection.send(register_info.encode())
         server_response = connection.recv(2)

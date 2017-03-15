@@ -107,6 +107,24 @@ class DB:
         elif user[0] == username:
             return user[4]
 
+    def gethashedpw(self,username):
+        """
+        Gets the correct password from database
+
+        :param username: string
+        :return: string
+
+        """
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT password FROM USER WHERE username == ?", (username,))
+
+        password = cursor.fetchone()[0]
+        print(password)
+        if password is None:
+            return None
+        else:
+            return password
 
     def register(self, username, pword, sec_question, sec_answer):
         """
