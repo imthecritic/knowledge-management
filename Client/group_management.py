@@ -11,6 +11,7 @@ class GroupManagementPage(tk.Frame):
     def __init__(self, frame, gui):
         tk.Frame.__init__(self, frame)
         self.var = StringVar()
+        self.var.trace("w", lambda *args: self.on_change())
         self.list_groups = []
         label = tk.Label(self, text="Group Management")
         label.pack()
@@ -30,6 +31,9 @@ class GroupManagementPage(tk.Frame):
                                                                                      self.memberEntry.get()))
         addButton.grid(row=0, column=2)
 
+        self.list_frame = tk.Frame(self)
+        self.list_frame.pack()
+
         middle = tk.Frame(self)
         middle.pack()
 
@@ -39,17 +43,17 @@ class GroupManagementPage(tk.Frame):
         self.list_members = tk.Listbox(middle)
         self.list_members.pack()
 
+        backButton = tk.Button(middle, text="Back", command=lambda: self.back(gui))
+        backButton.pack(side=RIGHT)
+
         removeButton = tk.Button(middle, text="Remove", command=lambda: self.removeMember(gui))
         removeButton.pack(side=RIGHT)
 
-        bottom = tk.Frame(self)
-        bottom.pack()
-
-        backButton = tk.Button(bottom, text="Back", command=lambda: self.back(gui))
-        backButton.pack()
-
     def addMember(self, gui, member_name):
         print(self.var.get())
+        repo_id = self.get_repo_id()
+        if not repo_id:
+            tkinter.messagebox.showinfo("Warning", "No groups available.")
         if member_name == "":
             tkinter.messagebox.showinfo("Warning", "Please enter the name of a member to add.")
 
@@ -59,7 +63,7 @@ class GroupManagementPage(tk.Frame):
         else:
             result = tkinter.messagebox.askyesno("Add Member", "Do you want to add " + member_name + " to the group?")
             if result:
-                response = gui.getClient().addMember(member_name)
+                response = gui.getClient().addMember(repo_id, member_name)
 
                 if response == "SUCCESS":
                     tkinter.messagebox.showinfo("Notice", "Successfully added " + member_name)
@@ -69,14 +73,16 @@ class GroupManagementPage(tk.Frame):
 
     def removeMember(self, gui):
         print(self.var.get())
+        repo_id = self.get_repo_id()
         member_name = self.list_members.get(ACTIVE)
-
+        if not repo_id:
+            tkinter.messagebox.showinfo("Warning", "No groups available.")
         if member_name:
             result = tkinter.messagebox.askyesno("Remove Member",
                                                  "Do you want to remove " + member_name + " from the group?")
             if result:
-                response = gui.getClient().removeMember(member_name)
-                if response == "SUCCESS":
+                response = gui.getClient().removeMember(repo_id, member_name)
+                if response:
                     tkinter.messagebox.showinfo("Notice", "Successfully removed " + member_name)
                     self.list_members.delete(ACTIVE)
 
@@ -87,6 +93,19 @@ class GroupManagementPage(tk.Frame):
 
         gui.show_frame(menu.MenuPage)
 
+    def on_change(self):
+        self.list_members.delete(0, END)  # clear
+        members = self.client.get_group_members(self.get_repo_id())
+        for member in members:
+            self.list_members.insert(END, member)
+
+    def get_repo_id(self):
+        repo_name = self.var.get()
+        for group_tuple in self.list_groups:
+            if group_tuple[1] == repo_name:
+                return group_tuple[0]
+        return None
+
     def on_show(self):
         self.list_groups = self.client.retrieve_groups(global_username[0])
         if self.list_groups:
@@ -95,6 +114,6 @@ class GroupManagementPage(tk.Frame):
             self.var.set(" ")
         print(self.list_groups)
 
-        self.group_names = tk.OptionMenu(self, self.var, *[tup[1] for tup in self.list_groups]
+        self.group_names = tk.OptionMenu(self.list_frame, self.var, *[tup[1] for tup in self.list_groups]
                                                                 if self.list_groups else " ")
         self.group_names.pack()

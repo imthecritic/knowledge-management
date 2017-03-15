@@ -14,6 +14,7 @@ class SearchPage(tk.Frame):
         tk.Frame.__init__(self, frame)
 
         self.filename = None
+        self.file_group_id = None
 
         self.gui = gui
         self.client = gui.getClient()
@@ -48,11 +49,11 @@ class SearchPage(tk.Frame):
 
         self.clicked = 0
 
-        self.monthText = tk.Label(top, text="Month")
-        self.monthEntry = tk.Entry(top)
+        self.dateText = tk.Label(top, text="Date")
+        self.dateEntry = tk.Entry(top)
 
-        self.keywordsText = tk.Label(top, text="Keywords")
-        self.keywordsEntry = tk.Entry(top)
+        self.tagText = tk.Label(top, text="Tag")
+        self.tagEntry = tk.Entry(top)
 
         self.updateButton = tk.Button(top, text="Update",
                                       command=lambda: self.updateSearch())
@@ -92,22 +93,18 @@ class SearchPage(tk.Frame):
 
         self.tree = ttk.Treeview(resultsFrame)
 
-        self.tree["columns"] = ("owner", "date1", "comment", "number", "date2", "tag")
+        columns = ("#0", "owner", "date1", "size", "date2", "tag")
+        column_names = ("File Name", "Owner", "Date", "Size", "Date", "Tags")
+        self.tree["columns"] = columns[1:]
         self.tree.column("#0", width=100)
-        self.tree.column("owner", width=100)
-        self.tree.column("date1", width=110)
-        self.tree.column("comment", width=100)
-        self.tree.column("number", width=100)
-        self.tree.column("date2", width=110)
+        self.tree.column("owner", width=80)
+        self.tree.column("date1", width=125)
+        self.tree.column("date2", width=125)
+        self.tree.column("size", width=125)
         self.tree.column("tag", width=100)
 
-        self.tree.heading("#0", text="File Name")
-        self.tree.heading("owner", text="Owner")
-        self.tree.heading("date1", text="Date")
-        self.tree.heading("comment", text="Comments")
-        self.tree.heading("number", text="Number")
-        self.tree.heading("date2", text="Date")
-        self.tree.heading("tag", text="Tag")
+        for col, name in zip(columns, column_names):
+            self.tree.heading(col, text=name, command=lambda _col=col: self.treeview_sort_column(self.tree, _col, False))
 
         self.tree.pack()
 
@@ -116,24 +113,6 @@ class SearchPage(tk.Frame):
         self.group_var = StringVar()
         self.group_var.trace("w", lambda *args: self.getUpdates(GROUPS))
         self.groupNameText = tk.Label(self.list_frame, text="Group Name")
-
-        sortingFrame = tk.Frame(middle)
-        sortingFrame.grid(row=0, column=2)
-
-        sortingLabel = tk.Label(sortingFrame, text="Sorting Options")
-        sortingLabel.pack()
-
-        filenameButton = tk.Button(sortingFrame, text="Filename", command=lambda: self.sortByFilename())
-        filenameButton.pack()
-        self.filenameButtonClicked = 0
-
-        filesizeButton = tk.Button(sortingFrame, text="Size", command=lambda: self.sortBySize())
-        filesizeButton.pack(ipadx=13)
-        self.sizeButtonClicked = 0
-
-        filedateButton = tk.Button(sortingFrame, text="Date", command=lambda: self.sortByDate())
-        filedateButton.pack(ipadx=11)
-        self.updateButtonClicked = 0
 
         self.comment = StringVar()
         self.commentLabel = tk.Label(self, textvariable=self.comment)
@@ -155,6 +134,19 @@ class SearchPage(tk.Frame):
                                command=lambda: self.back(gui))
         backButton.grid(row=1, column=1)
 
+    def treeview_sort_column(self, tv, col, reverse):
+
+        l = [(tv.set(k, col), k) if col != "#0" else (tv.item(k, 'text'), k) for k in tv.get_children()]
+        l.sort(reverse=reverse)
+
+        # rearrange items in sorted positions
+        for index, (val, k) in enumerate(l):
+            tv.move(k, '', index)
+
+        # reverse sort next time
+        tv.heading(col, command=lambda: self.treeview_sort_column(tv, col, not reverse))
+
+
     def show_groupOptions(self):
         self.groupNameText.pack()
         self.group_names.pack()
@@ -164,34 +156,36 @@ class SearchPage(tk.Frame):
         self.group_names.pack_forget()
 
     def updateSearch(self):
-        if self.monthEntry.get():
+        if self.dateEntry.get():
             for child in self.tree.get_children():
-                if self.monthEntry.get() not in self.tree.item(child, 'values')[1]:
-                    self.tree.detach(child)
-        if self.keywordsEntry.get():
-            print(self.keywordsEntry.get())
+                if self.dateEntry.get() not in self.tree.item(child, 'values')[1]:
+                    self.tree.delete(child)
+        if self.tagEntry.get():
+            for child in self.tree.get_children():
+                if self.dateEntry.get() not in self.tree.item(child, 'values')[4]:
+                    self.tree.delete(child)
 
-        self.monthEntry.delete(0, 'end')
-        self.keywordsEntry.delete(0, 'end')
+        self.dateEntry.delete(0, 'end')
+        self.tagEntry.delete(0, 'end')
 
     def filter(self):
         self.clicked += 1
         if self.clicked % 2 == 1:
-            self.monthText.grid(row=3, sticky=E)
-            self.monthEntry.grid(row=3, column=1)
-            self.keywordsText.grid(row=4, sticky=E)
-            self.keywordsEntry.grid(row=4, column=1)
+            self.dateText.grid(row=3, sticky=E)
+            self.dateEntry.grid(row=3, column=1)
+            self.tagText.grid(row=4, sticky=E)
+            self.tagEntry.grid(row=4, column=1)
             self.updateButton.grid(row=4, column=2)
 
         else:
-            self.monthText.grid_forget()
-            self.monthEntry.grid_forget()
-            self.keywordsText.grid_forget()
-            self.keywordsEntry.grid_forget()
+            self.dateText.grid_forget()
+            self.dateEntry.grid_forget()
+            self.tagText.grid_forget()
+            self.tagEntry.grid_forget()
             self.updateButton.grid_forget()
 
-            self.monthEntry.delete(0, 'end')
-            self.keywordsEntry.delete(0, 'end')
+            self.dateEntry.delete(0, 'end')
+            self.tagEntry.delete(0, 'end')
 
     def search(self, gui, filename):
         # response = gui.getClient().search(filename)
@@ -205,71 +199,6 @@ class SearchPage(tk.Frame):
             else:
                 print("Found " + filename)
 
-    def sortByFilename(self):
-        filenames = []
-
-        currentTree = self.tree.get_children()
-        for child in currentTree:
-            filenames.append(self.tree.item(child, 'text'))
-            self.tree.detach(child)
-
-        self.filenameButtonClicked += 1
-        if self.filenameButtonClicked % 2 == 1:
-            filenames.sort(reverse=True)
-            for filename in filenames:
-                for child in currentTree:
-                    if self.tree.item(child, 'text') == filename:
-                        self.tree.reattach(child, "", 0)
-        else:
-            filenames.sort()
-            for filename in filenames:
-                for child in currentTree:
-                    if self.tree.item(child, 'text') == filename:
-                        self.tree.reattach(child, "", 0)
-
-    def sortBySize(self):
-        sizes = []
-        currentTree = self.tree.get_children()
-        for child in currentTree:
-            print(self.tree.item(child, 'values')[0])
-            sizes.append(self.tree.item(child, 'values')[0])
-            self.tree.detach(child)
-
-        self.sizeButtonClicked += 1
-        if self.sizeButtonClicked % 2 == 1:
-            sizes.sort(reverse=True)
-            for size in sizes:
-                for child in currentTree:
-                    if self.tree.item(child, 'values')[0] == size:
-                        self.tree.reattach(child, "", 0)
-        else:
-            sizes.sort()
-            for size in sizes:
-                for child in currentTree:
-                    if self.tree.item(child, 'values')[0] == size:
-                        self.tree.reattach(child, "", 0)
-
-    def sortByDate(self):
-        dates = []
-        currentTree = self.tree.get_children()
-        for child in currentTree:
-            dates.append(self.tree.item(child, 'values')[1])
-            self.tree.detach(child)
-
-        self.updateButtonClicked += 1
-        if self.updateButtonClicked % 2 == 1:
-            dates.sort(reverse=True)
-            for date in dates:
-                for child in currentTree:
-                    if self.tree.item(child, 'values')[1] == date:
-                        self.tree.reattach(child, "", 0)
-
-        else:
-            dates.sort()
-            for date in dates:
-                for child in currentTree:
-                    if self.tree.item(child, 'values')[1] == date:
-                        self.tree.reattach(child, "", 0)
 
     def display_self(self):
         self.remove_groupOptions()
@@ -298,7 +227,7 @@ class SearchPage(tk.Frame):
     def download(self, gui):
         if self.filename:
             print("Downloading: " + self.filename)
-            gui.getClient().download(self.filename)
+            gui.getClient().download(self.filename, self.file_group_id)
             self.filename = None
         else:
             print("Error")
@@ -306,9 +235,9 @@ class SearchPage(tk.Frame):
     def delete(self, gui):
         if self.filename:
             print("Deleting: " + self.filename)
-            result = gui.getClient().delete(self.filename)
+            result = self.client.delete(self.filename, self.file_group_id)
 
-            if result == 0:
+            if result:
                 tkinter.messagebox.showinfo("Notice", "Successfully deleted: " + self.filename)
                 for child in self.tree.get_children():
                     if self.tree.item(child, 'text') == self.filename:
@@ -326,10 +255,11 @@ class SearchPage(tk.Frame):
             info = str(date[1]) + "/" + str(date[2]) + "/" + str(date[0]) + " " + str(date[3]) + ":" + str(
                 date[4]) + ":" + str(date[5])
 
-            another_date = time.gmtime(int(tup[5]))
+            another_date = time.gmtime(int(tup[4]))
             more_info = str(another_date[1]) + "/" + str(another_date[2]) + "/" + str(another_date[0]) + " " + str(
                 another_date[3]) + ":" + str(another_date[4]) + ":" + str(another_date[5])
-            self.tree.insert("", 0, text=tup[0], values=(tup[1], info, tup[3], tup[4], more_info, tup[6]))
+            self.tree.insert("", 0, text=tup[0], values=(tup[1], info, str(tup[5]) + '  bytes',
+                                                         more_info, tup[7], tup[3], tup[6]))
         print(files)
 
     def getUpdates(self, group_type):
@@ -340,7 +270,9 @@ class SearchPage(tk.Frame):
             result = self.client.retrieve_repo([repoids[0]])
 
         elif group_type is GROUPS:
-            result = self.client.retrieve_repo([self.get_repo_id()])
+            repo_id = self.get_repo_id()
+            if repo_id:
+                result = self.client.retrieve_repo([repo_id])
         elif group_type is SHARED:
             result = self.client.retrieve_repo([SHARED_REPO_ID])
         elif group_type is ALL:
@@ -352,22 +284,13 @@ class SearchPage(tk.Frame):
             pass
         self.display_files(result)
 
-        # for child in self.tree.get_children():
-        #     self.tree.delete(child)
-
-        # self.tree.insert("", 0, text="lines.txt", values=("5 bytes", "Feb 25th", "self"))
-        # self.tree.insert("", 0, text="groups.txt", values=("10 bytes", "Jan 1st", "shared"))
-        # self.tree.insert("", 0, text="test.txt", values=("7 bytes", "Feb 4th", "group"))
-        # self.tree.insert("", 0, text="picture.jpg", values=("5 bytes", "Mar 21st", "self"))
-
-        # self.rows = self.tree.get_children()
-
     def OnClick(self, event):
         item = self.tree.selection()[0]
         self.filename = self.tree.item(item, 'text')
+        self.file_group_id = self.tree.item(item, 'values')[6]
         print("Clicked on: " + self.tree.item(item, 'text'))
-        print("Comment: " + self.tree.item(item, 'values')[2])
-        self.comment.set("Comment: " + self.tree.item(item, 'values')[2])
+        print("Comment: " + self.tree.item(item, 'values')[5])
+        self.comment.set("Comment: " + self.tree.item(item, 'values')[5])
 
     def back(self, gui):
         # parameter: gui -> The GUI that is being used.
@@ -389,6 +312,7 @@ class SearchPage(tk.Frame):
         for group_tuple in self.list_groups:
             if group_tuple[1] == repo_name:
                 return group_tuple[0]
+        return None
 
     def group_repo_ids(self):
         for group_tuple in self.list_groups:
